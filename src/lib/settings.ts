@@ -16,7 +16,14 @@ export const defaultSettings = (): Settings => ({
 /** Lê as configurações DO USUÁRIO; se ainda não existirem, semeia os padrões. */
 export async function getSettings(db: Db, userId: string): Promise<Settings> {
   const [row] = await db.select().from(userSettings).where(eq(userSettings.userId, userId)).limit(1);
-  if (row) return { factors: row.factors, useCardmarketFallback: row.useCardmarketFallback };
+  if (row) {
+    const d = defaultSettings();
+    // completa com os padrões se faltar alguma chave (nunca deixa um fator indefinido chegar à fórmula)
+    return {
+      factors: { conditions: { ...d.factors.conditions, ...row.factors?.conditions }, languages: { ...d.factors.languages, ...row.factors?.languages } },
+      useCardmarketFallback: row.useCardmarketFallback,
+    };
+  }
   const d = defaultSettings();
   await db.insert(userSettings).values({ userId, factors: d.factors, useCardmarketFallback: d.useCardmarketFallback }).onConflictDoNothing();
   return d;

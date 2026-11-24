@@ -10,6 +10,14 @@ import { parseRateToMicro } from "./valuation";
 
 export const FX_URL = "https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL";
 export const FX_TTL_MS = 6 * 60 * 60 * 1000;
+/** Depois de uma falha, não tenta de novo por este tempo (senão toda página esperaria o timeout da API fora do ar). */
+export const FX_RETRY_BACKOFF_MS = 2 * 60 * 1000;
+
+let lastFailureAt = 0;
+/** Só para testes: zera a pausa entre tentativas. */
+export function resetFxBackoff(): void {
+  lastFailureAt = 0;
+}
 
 export class FxError extends Error {}
 
@@ -27,7 +35,9 @@ export interface Rates {
 
 function toDate(ts: string | number | undefined): Date | null {
   const n = Number(ts);
-  return Number.isFinite(n) && n > 0 ? new Date(n * 1000) : null;
+  if (!Number.isFinite(n) || n <= 0) return null;
+  // a API manda segundos; se algum dia mandar milissegundos (> 10^11) também funciona
+  return new Date(n > 1e11 ? n : n * 1000);
 }
 
 /** Busca na AwesomeAPI e valida. Lança FxError se algo vier errado. */
@@ -72,12 +82,18 @@ export async function getRates(db: Db, opts: { now?: Date; fetchImpl?: typeof fe
   if (fresh && !opts.force && cached.usd) {
     return { usdMicro: cached.usd.rateMicro, eurMicro: cached.eur?.rateMicro ?? null, fetchedAt: cached.usd.fetchedAt, stale: false };
   }
+  // API fora do ar há pouco e já temos um valor guardado: nem tenta, usa o último (desatualizado)
+  if (!opts.force && cached.usd && now.getTime() - lastFailureAt < FX_RETRY_BACKOFF_MS && now.getTime() >= lastFailureAt) {
+    return { usdMicro: cached.usd.rateMicro, eurMicro: cached.eur?.rateMicro ?? null, fetchedAt: cached.usd.fetchedAt, stale: true };
+  }
   try {
     const r = await fetchRates(opts.fetchImpl);
+    lastFailureAt = 0;
     await upsert(db, "USD-BRL", r.usd.micro, r.usd.date, now);
     if (r.eur) await upsert(db, "EUR-BRL", r.eur.micro, r.eur.date, now);
     return { usdMicro: r.usd.micro, eurMicro: r.eur?.micro ?? cached.eur?.rateMicro ?? null, fetchedAt: now, stale: false };
   } catch (e) {
+    lastFailureAt = now.getTime();
     if (cached.usd) {
       return { usdMicro: cached.usd.rateMicro, eurMicro: cached.eur?.rateMicro ?? null, fetchedAt: cached.usd.fetchedAt, stale: true };
     }

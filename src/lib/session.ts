@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getIronSession, type SessionOptions } from "iron-session";
 import { getDb } from "@/db";
+import { pickClientIp } from "./secure";
 import { getActiveUser } from "./users";
 
 export interface SessionData {
@@ -62,5 +63,5 @@ export async function requireUser(): Promise<CurrentUser> {
 /** IP do cliente. Na Vercel, x-real-ip é definido pela plataforma (não pelo cliente). */
 export async function clientIp(): Promise<string> {
   const h = await headers();
-  return h.get("x-real-ip") ?? h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  return pickClientIp(h.get("x-real-ip"), h.get("x-forwarded-for"));
 }

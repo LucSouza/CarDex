@@ -124,7 +124,8 @@ export async function ensureCard(
   if (cached && fresh && !opts.force) return cached;
   const t = opts.t ?? createTcgdex();
   try {
-    const got = await fetchCard(t, id, opts.lang ?? (cached?.card.catalogLang as CatalogLang | undefined));
+    // o idioma JÁ guardado vence a sugestão da busca: a carta é compartilhada e o nome não pode alternar entre PT/EN/JA
+    const got = await fetchCard(t, id, (cached?.card.catalogLang as CatalogLang | undefined) ?? opts.lang);
     if (!got) return cached ? { ...cached, stale: true } : null;
     await saveCard(db, got.data, got.priceLang, now);
     return (await readCard(db, id)) ?? null;

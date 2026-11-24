@@ -1,8 +1,8 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { getDb } from "@/db";
 import { getRates } from "@/lib/fx";
 import { refreshStaleCards } from "@/lib/price-service";
+import { safeEqual } from "@/lib/secure";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -10,9 +10,7 @@ export const maxDuration = 60;
 function validBearer(header: string | null): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret || secret.length < 16 || !header?.startsWith("Bearer ")) return false;
-  const given = Buffer.from(header.slice(7));
-  const want = Buffer.from(secret);
-  return given.length === want.length && timingSafeEqual(given, want);
+  return safeEqual(header.slice(7), secret);
 }
 
 /**

@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { createMemoryDb, type Db } from "@/db";
 import { cardPrices, cards, collectionItems, fxRates, users } from "@/db/schema";
 import { addItem, getItem, listItems, listRemoved, purgeItem, removeItem, restoreItem, summarize, updateItem, valueOfItem } from "./collection";
-import { FxError, getRates } from "./fx";
+import { FxError, getRates, resetFxBackoff } from "./fx";
 import { CARD_TTL_MS, ensureCard, readCard, refreshStaleCards, saveCard } from "./price-service";
 import { defaultSettings, getSettings, resetSettings, saveSettings } from "./settings";
 import { normalizeCard, type Tcgdex } from "./tcgdex";
@@ -52,6 +52,7 @@ function fakeTcgdex(opts: { fail?: boolean } = {}) {
 }
 
 beforeEach(async () => {
+  resetFxBackoff();
   db = await createMemoryDb();
   a = await createUser(db, "Ana", "hash-a");
   b = await createUser(db, "Bruno", "hash-b");
@@ -202,6 +203,25 @@ describe("isolamento entre usuários (multiusuário)", () => {
   });
 });
 
+describe("configurações incompletas", () => {
+  it("completa com os padrões se faltar uma chave no JSON guardado", async () => {
+    await saveSettings(db, a, { ...defaultSettings(), factors: { conditions: { NM: 10000 } as never, languages: { PT: 5000 } as never } });
+    const s = await getSettings(db, a);
+    expect(s.factors.conditions).toEqual({ NM: 10000, SP: 8500, MP: 6500, HP: 4500, D: 2500 });
+    expect(s.factors.languages).toEqual({ EN: 10000, JP: 9500, PT: 5000 });
+  });
+});
+
+describe("idioma do catálogo", () => {
+  it("o idioma guardado vence a sugestão da busca ao atualizar uma carta velha", async () => {
+    const f = fakeTcgdex();
+    const later = new Date(NOW.getTime() + CARD_TTL_MS + 1000);
+    await ensureCard(db, "cel25-5", { t: f.t, lang: "en", now: later }); // a busca sugeriu EN, mas a carta está guardada em PT
+    expect(f.calls).toEqual(["pt:cel25-5"]);
+    expect((await readCard(db, "cel25-5"))?.card.catalogLang).toBe("pt");
+  });
+});
+
 describe("configurações", () => {
   it("semeia os padrões (PT 0,90), edita, valida e restaura", async () => {
     const d = await getSettings(db, a);
@@ -308,6 +328,23 @@ describe("câmbio", () => {
     const later = new Date(NOW.getTime() + 7 * 3600_000);
     const r = await getRates(db, { now: later, fetchImpl: down });
     expect(r).toMatchObject({ usdMicro: 5_888_100, stale: true });
+  });
+
+  it("depois de uma falha não tenta de novo por 2 min (a página não espera o timeout a cada abertura)", async () => {
+    await getRates(db, { now: NOW, fetchImpl: ok("5.8881", "6.4551") });
+    const later = new Date(NOW.getTime() + 7 * 3600_000);
+    let calls = 0;
+    const counting = (async () => {
+      calls++;
+      return new Response("x", { status: 500 });
+    }) as typeof fetch;
+    expect((await getRates(db, { now: later, fetchImpl: counting })).stale).toBe(true);
+    expect((await getRates(db, { now: new Date(later.getTime() + 30_000), fetchImpl: counting })).stale).toBe(true);
+    expect(calls).toBe(1); // a segunda chamada nem foi à rede
+    await getRates(db, { now: new Date(later.getTime() + 3 * 60_000), fetchImpl: counting });
+    expect(calls).toBe(2); // passou a pausa: tenta de novo
+    const back = await getRates(db, { now: new Date(later.getTime() + 6 * 60_000), fetchImpl: ok("5.9000", "6.5000") });
+    expect(back).toMatchObject({ usdMicro: 5_900_000, stale: false });
   });
 
   it("sem cache e sem rede: erro explícito, nunca 0", async () => {
