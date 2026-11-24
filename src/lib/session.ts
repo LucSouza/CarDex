@@ -17,7 +17,7 @@ export interface CurrentUser {
 }
 
 const SEVEN_DAYS = 60 * 60 * 24 * 7;
-export const SESSION_COOKIE = "pokedex_session";
+export const SESSION_COOKIE = "cardex_session";
 
 function sessionOptions(): SessionOptions {
   const password = process.env.SESSION_SECRET;

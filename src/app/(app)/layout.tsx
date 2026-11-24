@@ -19,7 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="space-y-6">
       <nav className="flex flex-wrap items-center gap-1 rounded-xl border border-border bg-surface p-2 text-sm">
         <Link href="/" className="rounded-md px-3 py-1.5 font-bold">
-          PokeDex
+          CarDex
         </Link>
         {NAV.map((n) => (
           <Link key={n.href} href={n.href} className="hidden rounded-md px-3 py-1.5 hover:bg-surface-2 sm:inline-block">

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "PokeDex", template: "%s · PokeDex" },
+  title: { default: "CarDex", template: "%s · CarDex" },
   description: "Coleção de cartas Pokémon TCG com valor estimado em reais.",
   robots: { index: false, follow: false },
 };

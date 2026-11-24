@@ -1,4 +1,4 @@
-# PokeDex
+# CarDex
 
 Coleção de cartas Pokémon TCG com **valor estimado em reais**. Cada pessoa tem a sua coleção, os seus fatores de cálculo
 e o seu histórico (multiusuário desde o início; por enquanto sem cadastro público: o usuário é criado por script).
@@ -47,7 +47,7 @@ Verificações: `npm run lint && npm run typecheck && npm test && npm run build`
 
 ## Produção (Vercel + Neon)
 
-1. **Banco:** o PokeDex usa o **mesmo projeto Neon** dos outros apps, mas só escreve no schema **`pokedex`**
+1. **Banco:** o CarDex usa o **mesmo projeto Neon** dos outros apps, mas só escreve no schema **`pokedex`**
    (a tabela de migrations é `pokedex.__pokedex_migrations`). Ele não toca em nenhum outro schema.
    - Se preferir um banco separado (recomendado quando o produto for comercializado): no console do Neon, *Create project*
      e use a URL *pooled* dele em `DATABASE_URL`. As migrations criam o schema sozinhas.

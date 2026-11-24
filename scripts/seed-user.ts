@@ -1,9 +1,9 @@
 /**
- * Cria (ou redefine a senha de) um usuário do PokeDex.
+ * Cria (ou redefine a senha de) um usuário do CarDex.
  *
  *   npm run seed:user -- ana
  *
- * A senha é digitada sem aparecer na tela (ou vem da variável POKEDEX_PASSWORD, para automação).
+ * A senha é digitada sem aparecer na tela (ou vem da variável CARDEX_PASSWORD, para automação).
  * Só o hash bcrypt vai para o banco; a senha nunca é impressa nem gravada. Mínimo de 10 caracteres.
  */
 import bcrypt from "bcryptjs";
@@ -16,7 +16,7 @@ const MIN_LEN = 10;
 function readHidden(prompt: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const stdin = process.stdin;
-    if (!stdin.isTTY) return reject(new Error("Sem terminal interativo: defina a variável POKEDEX_PASSWORD."));
+    if (!stdin.isTTY) return reject(new Error("Sem terminal interativo: defina a variável CARDEX_PASSWORD."));
     process.stdout.write(prompt);
     stdin.setRawMode(true);
     stdin.resume();
@@ -48,7 +48,7 @@ async function main() {
   if (!/^[a-z0-9._-]{2,40}$/.test(username)) {
     throw new Error("Uso: npm run seed:user -- <usuario>   (2 a 40 caracteres: letras minúsculas, números, . _ -)");
   }
-  const pw = process.env.POKEDEX_PASSWORD ?? (await readHidden(`Senha de ${username} (mín. ${MIN_LEN} caracteres): `));
+  const pw = process.env.CARDEX_PASSWORD ?? (await readHidden(`Senha de ${username} (mín. ${MIN_LEN} caracteres): `));
   if (pw.length < MIN_LEN) throw new Error(`A senha precisa ter pelo menos ${MIN_LEN} caracteres.`);
 
   await runMigrations();

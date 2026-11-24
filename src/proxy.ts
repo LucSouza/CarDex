@@ -6,7 +6,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * /api/refresh tem a própria autenticação (Bearer CRON_SECRET) e fica de fora.
  */
 export function proxy(req: NextRequest) {
-  if (!req.cookies.has("pokedex_session")) {
+  if (!req.cookies.has("cardex_session")) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
