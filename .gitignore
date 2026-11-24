@@ -1,0 +1,21 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+.pglite/
+.orq/
+*.tsbuildinfo
+next-env.d.ts
+
+# env (o .env.example é versionado)
+.env
+.env.*
+!.env.example
+
+# logs / temp
+*.log
+npm-debug.log*
+.tmp/
+.temp/
+.vercel/

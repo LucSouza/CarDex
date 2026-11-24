@@ -1,0 +1,8 @@
+{
+    "external": true,
+    "vendors": [
+        "gemini",
+        "gptoss",
+        "jev"
+    ]
+}
